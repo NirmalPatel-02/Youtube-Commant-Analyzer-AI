@@ -3,55 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Toxicity Analyzer</title>
+    <title>CommentVision AI - YouTube Comment Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>YouTube Comment Toxicity Analyzer</h1>
-        <p>Analyze up to 300 comments for toxicity, threats, insults, and hate speech</p>
+        <header>
+            <h1>CommentVision AI</h1>
+            <p class="subtitle">Advanced YouTube Comment Analyzer • Powered by Deep Learning • Scan 500 comments</p>
+        </header>
 
-        <form method="post">
-            <input type="text" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." required 
-                   value="{{ url if url else '' }}">
-            <button type="submit">Analyze Video</button>
+        <form id="analyzeForm" method="post" action="/analyze">
+            <input type="text" name="youtube_url" placeholder="Paste any YouTube video URL..." required>
+            <button type="submit" id="analyzeBtn">
+                <span id="btnText">Scan Comments</span>
+                <span id="loading" class="hidden">
+                    <div class="spinner"></div>
+                </span>
+            </button>
         </form>
 
         {% if error %}
             <div class="error">{{ error }}</div>
         {% endif %}
 
-        {% if total_comments %}
+        {% if total %}
         <div class="results">
-            <h2>Results for <a href="{{ url }}" target="_blank">this video</a></h2>
-            <div class="stats-grid">
-                <div class="stat-card clean"><h3>Clean</h3><span class="big-number">{{ counts.clean }}</span></div>
-                <div class="stat-card toxic"><h3>Toxic</h3><span class="big-number">{{ counts.toxic }}</span></div>
-                <div class="stat-card severe"><h3>Severe Toxic</h3><span class="big-number">{{ counts.severe_toxic }}</span></div>
-                <div class="stat-card obscene"><h3>Obscene</h3><span class="big-number">{{ counts.obscene }}</span></div>
-                <div class="stat-card threat"><h3>Threat</h3><span class="big-number">{{ counts.threat }}</span></div>
-                <div class="stat-card insult"><h3>Insult</h3><span class="big-number">{{ counts.insult }}</span></div>
-                <div class="stat-card hate"><h3>Identity Hate</h3><span class="big-number">{{ counts.identity_hate }}</span></div>
+            <div class="heat-index-wrapper">
+                <div class="heat-badge {{ heat_color }}">
+                    <div class="heat-label">Toxicity Level</div>
+                    <div class="heat-value">{{ heat_index }}</div>
+                    <div class="heat-glow"></div>
+                </div>
             </div>
 
-            <div class="sample">
-                <h3>First 10 Comments</h3>
-                {% for i in range(10) %}
-                    {% if i < comments_sample|length %}
-                    <div class="comment-line">
-                        <span class="comment-text">{{ comments_sample[i]|truncate(100) }}</span>
-                        <span class="tags">
-                            {% for tag in predictions_sample[i] %}
-                                <span class="tag {{ tag }}">{{ tag }}</span>
+            <div class="stats-grid">
+                <div class="stat-card clean"><h3>Clean</h3><span class="num">{{ counts.clean }}</span></div>
+                <div class="stat-card toxic"><h3>Toxic</h3><span class="num">{{ counts.toxic }}</span></div>
+                <div class="stat-card severe"><h3>Severe Toxic</h3><span class="num">{{ counts.severe_toxic }}</span></div>
+                <div class="stat-card obscene"><h3>Obscene</h3><span class="num">{{ counts.obscene }}</span></div>
+                <div class="stat-card threat"><h3>Threat</h3><span class="num">{{ counts.threat }}</span></div>
+                <div class="stat-card insult"><h3>Insult</h3><span class="num">{{ counts.insult }}</span></div>
+                <div class="stat-card hate"><h3>Hate Speech</h3><span class="num">{{ counts.identity_hate }}</span></div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-box">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <div class="top-comments-grid">
+                {% for label, comments in top_comments.items() %}
+                <div class="comment-section {{ label }}">
+                    <h3>
+                        {% if label == "clean" %}Positive Comments
+                        {% else %}{{ label.replace("_", " ").title() }} Comments{% endif %}
+                        <span class="count">({{ comments|length }})</span>
+                    </h3>
+                    <div class="scroll-box">
+                        {% if comments %}
+                            {% for c in comments %}
+                            <div class="comment {{ label }}">{{ c|truncate(150) }}</div>
                             {% endfor %}
-                        </span>
+                        {% else %}
+                            <div class="comment empty">No comments</div>
+                        {% endif %}
                     </div>
-                    {% endif %}
+                </div>
                 {% endfor %}
             </div>
         </div>
         {% endif %}
     </div>
+
+    <script>
+        document.getElementById('analyzeForm').onsubmit = () => {
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+        };
+
+        {% if total %}
+        new Chart(document.getElementById('pieChart'), {
+            type: 'doughnut',
+            data: { labels: ['Clean', 'Toxic'], datasets: [{ data: {{ chart_data.pie|safe }}, backgroundColor: ['#10b981', '#ff4444'] }] },
+            options: { plugins: { legend: { position: 'bottom' }}}
+        });
+
+        new Chart(document.getElementById('barChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Clean', 'Toxic', 'Severe', 'Obscene', 'Threat', 'Insult', 'Hate'],
+                datasets: [{ data: {{ chart_data.bar|safe }}, backgroundColor: ['#10b981','#ff4444','#dc2626','#f97316','#991b1b','#fb923c','#7c3aed'] }]
+            },
+            options: { plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true }}}
+        });
+        {% endif %}
+    </script>
 </body>
 </html>
