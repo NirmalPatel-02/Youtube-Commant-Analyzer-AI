@@ -15,7 +15,7 @@
             <p class="subtitle">Advanced YouTube Comment Analyzer • Powered by Deep Learning • Scan 500 comments</p>
         </header>
 
-        <form id="analyzeForm" method="post" action="/analyze">
+        <form id="analyzeForm" method="post" action="/analyze" class="url-form desktop-row">
             <input type="text" name="youtube_url" placeholder="Paste any YouTube video URL..." required>
             <button type="submit" id="analyzeBtn">
                 <span id="btnText">Scan Comments</span>
@@ -42,11 +42,11 @@
             <div class="stats-grid">
                 <div class="stat-card clean"><h3>Clean</h3><span class="num">{{ counts.clean }}</span></div>
                 <div class="stat-card toxic"><h3>Toxic</h3><span class="num">{{ counts.toxic }}</span></div>
-                <div class="stat-card severe"><h3>Severe Toxic</h3><span class="num">{{ counts.severe_toxic }}</span></div>
+                <div class="stat-card severe_toxic"><h3>Severe Toxic</h3><span class="num">{{ counts.severe_toxic }}</span></div>
                 <div class="stat-card obscene"><h3>Obscene</h3><span class="num">{{ counts.obscene }}</span></div>
                 <div class="stat-card threat"><h3>Threat</h3><span class="num">{{ counts.threat }}</span></div>
                 <div class="stat-card insult"><h3>Insult</h3><span class="num">{{ counts.insult }}</span></div>
-                <div class="stat-card hate"><h3>Hate Speech</h3><span class="num">{{ counts.identity_hate }}</span></div>
+                <div class="stat-card identity_hate"><h3>Hate Speech</h3><span class="num">{{ counts.identity_hate }}</span></div>
             </div>
 
             <div class="charts">
@@ -93,7 +93,7 @@
         new Chart(document.getElementById('pieChart'), {
             type: 'doughnut',
             data: { labels: ['Clean', 'Toxic'], datasets: [{ data: {{ chart_data.pie|safe }}, backgroundColor: ['#10b981', '#ff4444'] }] },
-            options: { plugins: { legend: { position: 'bottom' }}}
+            options: { plugins: { legend: { position: 'bottom' }}, responsive: true, maintainAspectRatio: false }
         });
 
         new Chart(document.getElementById('barChart'), {
@@ -102,7 +102,12 @@
                 labels: ['Clean', 'Toxic', 'Severe', 'Obscene', 'Threat', 'Insult', 'Hate'],
                 datasets: [{ data: {{ chart_data.bar|safe }}, backgroundColor: ['#10b981','#ff4444','#dc2626','#f97316','#991b1b','#fb923c','#7c3aed'] }]
             },
-            options: { plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true }}}
+            options: { 
+                plugins: { legend: { display: false }}, 
+                scales: { y: { beginAtZero: true }},
+                responsive: true,
+                maintainAspectRatio: false
+            }
         });
         {% endif %}
     </script>
